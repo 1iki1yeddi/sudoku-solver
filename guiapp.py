@@ -32,22 +32,31 @@ class Grid:
         self.model = [[self.cubes[i][j].value for j in range(self.cols)] for i in range(self.rows)]
 
     def place(self, val):
-        row, col = self.selected
-        if self.cubes[row][col].value == 0:
-            self.cubes[row][col].set(val)
-            self.update_model()
+        if self.selected is None:
+            return False
 
-            if valid(self.model, val, (row,col)) and self.solve():
-                return True
-            else:
-                self.cubes[row][col].set(0)
-                self.cubes[row][col].set_temp(0)
-                self.update_model()
-                return False
+        row, col = self.selected
+        if self.cubes[row][col].value != 0:
+            return False
+
+        self.cubes[row][col].set(val)
+        self.update_model()
+
+        if valid(self.model, val, (row,col)) and self.solve():
+            return True
+
+        self.cubes[row][col].set(0)
+        self.cubes[row][col].set_temp(0)
+        self.update_model()
+        return False
 
     def sketch(self, val):
+        if self.selected is None:
+            return
+
         row, col = self.selected
-        self.cubes[row][col].set_temp(val)
+        if self.cubes[row][col].value == 0:
+            self.cubes[row][col].set_temp(val)
 
     def draw(self):
         # Draw Grid Lines
@@ -75,6 +84,9 @@ class Grid:
         self.selected = (row, col)
 
     def clear(self):
+        if self.selected is None:
+            return
+
         row, col = self.selected
         if self.cubes[row][col].value == 0:
             self.cubes[row][col].set_temp(0)
@@ -287,12 +299,13 @@ def redraw_window(win, board, time, strikes):
 
 
 def format_time(secs):
-    sec = secs%60
-    minute = secs//60
-    hour = minute//60
+    sec = secs % 60
+    minute = (secs // 60) % 60
+    hour = secs // 3600
 
-    mat = " " + str(minute) + ":" + str(sec)
-    return mat
+    if hour > 0:
+        return f" {hour}:{minute:02}:{sec:02}"
+    return f" {minute}:{sec:02}"
 
 
 def main():
@@ -338,17 +351,18 @@ def main():
                     board.solve_gui()
 
                 if event.key == pygame.K_RETURN:
-                    i, j = board.selected
-                    if board.cubes[i][j].temp != 0:
-                        if board.place(board.cubes[i][j].temp):
-                            print("Success")
-                        else:
-                            print("Wrong")
-                            strikes += 1
-                        key = None
+                    if board.selected is not None:
+                        i, j = board.selected
+                        if board.cubes[i][j].temp != 0:
+                            if board.place(board.cubes[i][j].temp):
+                                print("Success")
+                            else:
+                                print("Wrong")
+                                strikes += 1
+                            key = None
 
-                        if board.is_finished():
-                            print("Game over")
+                            if board.is_finished():
+                                print("Game over")
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 pos = pygame.mouse.get_pos()
@@ -364,5 +378,6 @@ def main():
         pygame.display.update()
 
 
-main()
-pygame.quit()
+if __name__ == "__main__":
+    main()
+    pygame.quit()
